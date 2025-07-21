@@ -1,5 +1,6 @@
 # KiemTraHeThong.ps1 - Ban nang cao, khong dau, chi in ra man hinh
 # Cap nhat: Bo sung kiem tra Card Wifi, tinh toan va in ra CPU trung binh sau moi test.
+# Da sua loi Write-Progress (PercentComplete > 100).
 
 # Thong tin he thong
 Write-Host "===== THONG TIN HE DIEU HANH =====" -ForegroundColor Cyan
@@ -38,7 +39,7 @@ Function Get-CPUTemp {
 
 $temp1 = Get-CPUTemp
 if ($temp1 -ne $null) {
-    Write-Host "Nhiet do CPU truoc test: $temp1°C" -ForegroundColor Yellow
+    Write-Host "Nhiet độ CPU truoc test: $temp1°C" -ForegroundColor Yellow
 } else {
     Write-Host "Khong the lay nhiet do CPU truoc test (co the khong ho tro WMI hoac sensor driver)" -ForegroundColor Yellow
 }
@@ -80,7 +81,7 @@ if ($gpuDevices) {
 }
 
 
-# ===== STRESS TEST CPU NHE (30 GIAY - SINGLE CORE) =====
+# ===== STRESS TEST CPU NHE (30 GIAY - 1 LUONG) =====
 Write-Host "`n===== STRESS TEST CPU NHE (30 GIAY, 1 LUONG) =====" -ForegroundColor Yellow
 Write-Host "VUI LONG MO TASK MANAGER (Ctrl+Shift+Esc) VA CHUYEN SANG TAB HIEN THI HIEU SUAT (Performance)" -ForegroundColor White -BackgroundColor DarkRed
 Write-Host "DE THEO DOI MUC DO SU DUNG CPU TRONG QUA TRINH TEST." -ForegroundColor White -BackgroundColor DarkRed
@@ -106,7 +107,8 @@ while ((Get-Date) -lt $endTimeLight) {
 
     # Cap nhat tien do
     $elapsedSeconds = ((Get-Date) - $endTimeLight.AddSeconds(-30)).TotalSeconds
-    $lightTestProgress = ($elapsedSeconds / 30) * 100
+    # Dam bao PercentComplete khong vuot qua 100
+    $lightTestProgress = [Math]::Min(100, ($elapsedSeconds / 30) * 100)
     Write-Progress -Activity "Dang chay Stress Test CPU Nhe" -Status "Thoi gian con lai: $([int](30 - $elapsedSeconds))s" -PercentComplete $lightTestProgress
     Start-Sleep -Milliseconds 500 # Lay mau moi 0.5 giay
 }
@@ -187,7 +189,8 @@ while ((Get-Date) -lt $endHeavyTest) {
     }
 
     $elapsedSecondsHeavy = ((Get-Date) - $endHeavyTest.AddSeconds(-$durationHeavy)).TotalSeconds
-    $heavyTestProgress = ($elapsedSecondsHeavy / $durationHeavy) * 100
+    # Dam bao PercentComplete khong vuot qua 100
+    $heavyTestProgress = [Math]::Min(100, ($elapsedSecondsHeavy / $durationHeavy) * 100)
     Write-Progress -Activity "Dang chay Stress Test CPU Nang (Da Luong)" -Status "Thoi gian con lai: $([int]($durationHeavy - $elapsedSecondsHeavy))s" -PercentComplete $heavyTestProgress
     Start-Sleep -Milliseconds 500 # Lay mau moi 0.5 giay
 }
