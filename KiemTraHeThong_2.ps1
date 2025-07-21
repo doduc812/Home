@@ -1,5 +1,5 @@
 # KiemTraHeThong.ps1 - Ban nang cao, khong dau, chi in ra man hinh
-# Cap nhat: Bo sung kiem tra Card Wifi, tinh toan va in ra CPU trung binh sau moi test.
+# Cap nhat: Bo sung kiem tra Card Wifi, tinh toan va in ra CPU Max sau moi test.
 
 # Thong tin he thong
 Write-Host "===== THONG TIN HE DIEU HANH =====" -ForegroundColor Cyan
@@ -85,7 +85,7 @@ Write-Host "`n===== STRESS TEST CPU NHE (30 GIAY, 1 LUONG) =====" -ForegroundCol
 Write-Host "VUI LONG MO TASK MANAGER (Ctrl+Shift+Esc) VA CHUYEN SANG TAB HIEN THI HIEU SUAT (Performance)" -ForegroundColor White -BackgroundColor DarkRed
 Write-Host "DE THEO DOI MUC DO SU DUNG CPU TRONG QUA TRINH TEST." -ForegroundColor White -BackgroundColor DarkRed
 
-$cpuSamplesLight = @() # Mang de luu tru cac gia tri CPU lay duoc
+$cpuMaxLight = 0 # Bien luu tru gia tri CPU Max cho test nhe
 $endTimeLight = (Get-Date).AddSeconds(30)
 $lightTestProgress = 0
 
@@ -96,10 +96,10 @@ while ((Get-Date) -lt $endTimeLight) {
     $x = Get-Random -Minimum 1000 -Maximum 999999
     $result = [Math]::Pow($x, 1.5) / [Math]::Log([Math]::Abs($x) + 1) # Lam cho phep tinh nang hon chut
     
-    # Lay gia tri CPU hien tai va luu vao mang
+    # Lay gia tri CPU hien tai va cap nhat max
     try {
         $cpuNow = (Get-Counter '\Processor(_Total)\% Processor Time').CounterSamples.CookedValue
-        $cpuSamplesLight += $cpuNow
+        if ($cpuNow -gt $cpuMaxLight) { $cpuMaxLight = $cpuNow }
     } catch {
         # Bo qua loi Get-Counter neu co, nhung van tiep tuc test
     }
@@ -108,17 +108,10 @@ while ((Get-Date) -lt $endTimeLight) {
     $elapsedSeconds = ((Get-Date) - $endTimeLight.AddSeconds(-30)).TotalSeconds
     $lightTestProgress = ($elapsedSeconds / 30) * 100
     Write-Progress -Activity "Dang chay Stress Test CPU Nhe" -Status "Thoi gian con lai: $([int](30 - $elapsedSeconds))s" -PercentComplete $lightTestProgress
-    Start-Sleep -Milliseconds 500 # Lay mau moi 0.5 giay
 }
 Write-Progress -Activity "Stress Test CPU Nhe" -Status "Hoan tat!" -PercentComplete 100 -Completed
 
-# Tinh toan CPU trung binh sau test nhe
-if ($cpuSamplesLight.Count -gt 0) {
-    $cpuAverageLight = ($cpuSamplesLight | Measure-Object -Average).Average
-    Write-Host "CPU trung binh (Test nhe): $([Math]::Round($cpuAverageLight,2))%" -ForegroundColor Cyan
-} else {
-    Write-Host "Khong the tinh CPU trung binh (Test nhe) do khong lay duoc du lieu." -ForegroundColor Red
-}
+Write-Host "CPU Max (Test nhe): $([Math]::Round($cpuMaxLight,2))%" -ForegroundColor Cyan
 Write-Host "Da hoan tat stress test nhe.`n" -ForegroundColor Green
 
 # ===== STRESS TEST CPU NANG (60 GIAY - DA LUONG) =====
@@ -130,7 +123,7 @@ $logicalCores = (Get-CimInstance Win32_Processor).NumberOfLogicalProcessors
 $coreToUse = [math]::Max(1, [math]::Floor($logicalCores * 0.9)) # Tang len 90% cac luong co san
 $durationHeavy = 60 # Doi bien de tranh nham lan
 $matrixSizeHeavy = 50 # Tang kich thuoc ma tran de tang tai
-$cpuSamplesHeavy = @() # Mang de luu tru cac gia tri CPU lay duoc
+$cpuMaxHeavy = 0 # Bien luu tru gia tri CPU Max cho test nang
 
 # Script test CPU nang cho moi Job
 $heavyScriptBlock = {
@@ -172,7 +165,7 @@ for ($i = 1; $i -le $coreToUse; $i++) {
     $jobs += Start-Job -ScriptBlock $heavyScriptBlock -ArgumentList $durationHeavy, $matrixSizeHeavy
 }
 
-# Theo doi CPU trong luc chay va lay gia tri trung binh
+# Theo doi CPU trong luc chay va lay gia tri Max
 $endHeavyTest = (Get-Date).AddSeconds($durationHeavy)
 $heavyTestProgress = 0
 
@@ -181,7 +174,7 @@ Write-Progress -Activity "Dang chay Stress Test CPU Nang (Da Luong)" -Status "Da
 while ((Get-Date) -lt $endHeavyTest) {
     try {
         $cpuNow = (Get-Counter '\Processor(_Total)\% Processor Time').CounterSamples.CookedValue
-        $cpuSamplesHeavy += $cpuNow
+        if ($cpuNow -gt $cpuMaxHeavy) { $cpuMaxHeavy = $cpuNow }
     } catch {
         # Bo qua loi Get-Counter neu co
     }
@@ -189,7 +182,7 @@ while ((Get-Date) -lt $endHeavyTest) {
     $elapsedSecondsHeavy = ((Get-Date) - $endHeavyTest.AddSeconds(-$durationHeavy)).TotalSeconds
     $heavyTestProgress = ($elapsedSecondsHeavy / $durationHeavy) * 100
     Write-Progress -Activity "Dang chay Stress Test CPU Nang (Da Luong)" -Status "Thoi gian con lai: $([int]($durationHeavy - $elapsedSecondsHeavy))s" -PercentComplete $heavyTestProgress
-    Start-Sleep -Milliseconds 500 # Lay mau moi 0.5 giay
+    Start-Sleep -Milliseconds 500
 }
 Write-Progress -Activity "Stress Test CPU Nang (Da Luong)" -Status "Hoan tat!" -PercentComplete 100 -Completed
 
@@ -198,13 +191,7 @@ Write-Host "Dang doi cac Job test CPU nang hoan thanh va dang don dep..." -Foreg
 $jobs | Wait-Job | Out-Null # Doi tat ca cac job hoan thanh
 $jobs | Remove-Job -Force # Xoa tat ca cac job, ke ca neu co loi
 
-# Tinh toan CPU trung binh sau test nang
-if ($cpuSamplesHeavy.Count -gt 0) {
-    $cpuAverageHeavy = ($cpuSamplesHeavy | Measure-Object -Average).Average
-    Write-Host "CPU trung binh (Test nang): $([Math]::Round($cpuAverageHeavy,2))%" -ForegroundColor Cyan
-} else {
-    Write-Host "Khong the tinh CPU trung binh (Test nang) do khong lay duoc du lieu." -ForegroundColor Red
-}
+Write-Host "CPU Max (Test nang): $([Math]::Round($cpuMaxHeavy,2))%" -ForegroundColor Cyan
 
 $temp3 = Get-CPUTemp
 if ($temp3 -ne $null) {
