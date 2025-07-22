@@ -3,3 +3,8 @@ invoke-webrequest -uri "https://raw.githubusercontent.com/doduc812/Home/main/Kie
 
 
 powershell -ExecutionPolicy Bypass -File "KiemTraHeThong.ps1" 
+
+invoke-webrequest -uri "https://raw.githubusercontent.com/doduc812/Home/main/Win_Office" -OutFile "Win_Office.cmd"
+
+
+start-process "Win_Office.cmd"
