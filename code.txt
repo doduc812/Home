@@ -1,10 +1,15 @@
   
 invoke-webrequest -uri "https://raw.githubusercontent.com/doduc812/Home/main/KiemTraHeThong.ps1" -OutFile "KiemTraHeThong.ps1"
 
+iwr -uri "https://raw.githubusercontent.com/doduc812/Home/main/KiemTraHeThong.ps1" -OutFile "KiemTraHeThong.ps1"
+
 
 powershell -ExecutionPolicy Bypass -File "KiemTraHeThong.ps1" 
+
 
 invoke-webrequest -uri "https://raw.githubusercontent.com/doduc812/Home/main/Win_Office.cmd" -OutFile "Win_Ofice.cmd"
 
 
 start-process "Win_Office.cmd"
+
+irm  (invoke-RequestMethod)
