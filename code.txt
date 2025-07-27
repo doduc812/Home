@@ -12,4 +12,9 @@ invoke-webrequest -uri "https://raw.githubusercontent.com/doduc812/Home/main/Win
 
 start-process "Win_Office.cmd"
 
+
+invoke-webrequest -uri "https://raw.githubusercontent.com/doduc812/Home/main/visio2019.cmd" -OutFile "visio2019.cmd"
+
+start-process "visio2019.cmd"
+
 irm  (invoke-RequestMethod)
