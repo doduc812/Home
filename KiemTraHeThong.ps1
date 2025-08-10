@@ -68,43 +68,41 @@ if ($gpuDevices) {
     Write-Host "`n-- Khong phat hien card do hoa roi --" -ForegroundColor Red
 }
 
-# Kiểm tra Camera
-Write-Host "===== KIỂM TRA CAMERA =====" -ForegroundColor Cyan
-$cameraList = Get-PnpDevice -Class Camera | Where-Object { $_.Status -eq "OK" }
-if ($cameraList) {
-    foreach ($cam in $cameraList) {
-        Write-Host "Camera: $($cam.FriendlyName)" -ForegroundColor Yellow
-        Write-Host "ID: $($cam.InstanceId)"
-        if ($cam.FriendlyName -match "Hello" -or $cam.FriendlyName -match "IR" -or $cam.FriendlyName -match "depth" -or $cam.FriendlyName -match "SPITCameraGroup") {
-            Write-Host "→ Camera này có khả năng hỗ trợ nhận diện khuôn mặt Windows Hello." -ForegroundColor Green
+# Kiem tra danh sach camera va tim camera nhan dien khuon mat
+# Su dung WMI de lay thong tin thiet bi video
+Write-Host "=== KIEM TRA CAMERA ==="
+
+# Lay danh sach camera tu lop Win32_PnPEntity co ten chua "camera" hoac "video"
+$cameras = Get-WmiObject Win32_PnPEntity | Where-Object { $_.Name -match "camera|video" }
+
+if ($cameras) {
+    foreach ($cam in $cameras) {
+        Write-Host "Tim thay camera: $($cam.Name)"
+        
+        # Kiem tra ten co chua tu khoa lien quan den nhan dien khuon mat
+        if ($cam.Name -match "infrared|IR|RealSense|Hello|face|depth") {
+            Write-Host " => Camera nay co kha nang la camera nhan dien khuon mat" -ForegroundColor Green
         } else {
-            Write-Host "→ Camera thường, không thấy dấu hiệu hỗ trợ nhận diện khuôn mặt." -ForegroundColor Red
+            Write-Host " => Camera nay co kha nang chi la camera thuong" -ForegroundColor Yellow
         }
-        Write-Host ""
     }
 } else {
-    Write-Host "Không tìm thấy camera nào!" -ForegroundColor Red
+    Write-Host "Khong tim thay camera nao" -ForegroundColor Red
 }
 
-# Kiểm tra thiết bị vân tay
-Write-Host "===== KIỂM TRA CẢM BIẾN VÂN TAY =====" -ForegroundColor Cyan
-$fingerprintList = Get-PnpDevice | Where-Object { $_.FriendlyName -match "Fingerprint" -or $_.FriendlyName -match "Touch" -or $_.FriendlyName -match "Synaptics" -or $_.FriendlyName -match "Validity" }
-if ($fingerprintList) {
-    foreach ($fp in $fingerprintList) {
-        Write-Host "Thiết bị: $($fp.FriendlyName)" -ForegroundColor Yellow
-        Write-Host "ID: $($fp.InstanceId)"
-        if ($fp.FriendlyName -match "Fingerprint" -or $fp.FriendlyName -match "Touch") {
-            Write-Host "→ Có hỗ trợ đăng nhập bằng vân tay (Windows Hello)." -ForegroundColor Green
-        } else {
-            Write-Host "→ Thiết bị này không phải cảm biến vân tay chuẩn Windows Hello." -ForegroundColor Red
-        }
-        Write-Host ""
+# Kiem tra danh sach thiet bi van tay
+Write-Host "`n=== KIEM TRA VAN TAY ==="
+
+# Lay danh sach thiet bi co tu khoa fingerprint
+$fingerprintDevices = Get-WmiObject Win32_PnPEntity | Where-Object { $_.Name -match "fingerprint|synaptics|validity|Goodix" }
+
+if ($fingerprintDevices) {
+    foreach ($fp in $fingerprintDevices) {
+        Write-Host "Tim thay thiet bi van tay: $($fp.Name)" -ForegroundColor Green
     }
 } else {
-    Write-Host "Không tìm thấy thiết bị vân tay!" -ForegroundColor Red
+    Write-Host "Khong tim thay thiet bi van tay" -ForegroundColor Red
 }
-
-Write-Host "===== HOÀN TẤT KIỂM TRA =====" -ForegroundColor Cyan
 
 
 # ===== STRESS TEST CPU NHE (30s) =====
