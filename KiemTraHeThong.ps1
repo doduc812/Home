@@ -68,68 +68,73 @@ if ($gpuDevices) {
     Write-Host "`n-- Khong phat hien card do hoa roi --" -ForegroundColor Red
 }
 
-Write-Host "===== KIEM TRA CAMERA TOAN BO (Nhom va Don le) =====" -ForegroundColor Cyan
+Write-Host "===== KIEM TRA CAMERA VOI TACH NHOM VA PHAN LOAI TUNG CAMERA =====" -ForegroundColor Cyan
 
-# Lấy tất cả thiết bị camera, imaging device
+# Lay tat ca thiet bi camera va imaging device
 $allCameras = Get-WmiObject Win32_PnPEntity | Where-Object { $_.Caption -match "camera|imaging device" }
 
 if ($allCameras) {
-    # Danh sach da xu ly de tranh lap lai
-    $processedDeviceIDs = @()
 
-    foreach ($cam in $allCameras) {
-        if ($processedDeviceIDs -contains $cam.DeviceID) {
-            # Da xu ly roi, bo qua
-            continue
+    # Tim nhung thiet bi la nhom camera (ten co "Group" hoac "SPIT")
+    $cameraGroups = $allCameras | Where-Object { $_.Caption -match "Group|SPIT" }
+
+    # Tim nhung camera don le (khong phai nhom)
+    $singleCameras = $allCameras | Where-Object { $_.Caption -notmatch "Group|SPIT" }
+
+    # Xu ly nhom camera truoc
+    foreach ($group in $cameraGroups) {
+        Write-Host "`n[Nhom camera] $($group.Caption)" -ForegroundColor Cyan
+        $deviceId = $group.DeviceID
+
+        # Lay vendor ID tu DeviceID cua nhom
+        $vendorId = ($deviceId -split "\\")[1] -split "&" | Select-Object -First 1
+
+        # Tim tat ca camera con cung vendor, ngoai tru nhom hien tai
+        $subCams = $allCameras | Where-Object {
+            ($_.DeviceID -match $vendorId) -and ($_.DeviceID -ne $deviceId)
         }
 
-        $caption = $cam.Caption
-        $deviceId = $cam.DeviceID
+        if ($subCams.Count -eq 0) {
+            Write-Host " => Khong tim thay camera con trong nhom" -ForegroundColor Yellow
+        } else {
+            $hasIR = $false
+            Write-Host " => Danh sach cac camera con:"
+            foreach ($cam in $subCams) {
+                Write-Host "    + $($cam.Caption)" -NoNewline
 
-        # Kiem tra neu la camera nhom (co "Group" hoac "SPIT" trong ten)
-        if ($caption -match "Group|SPIT") {
-            Write-Host "`n[Nhom Camera] $caption" -ForegroundColor Cyan
-
-            # Lấy vendor ID từ DeviceID (chuỗi thường có dạng PCI\VEN_XXXX...)
-            $vendorId = ($deviceId -split "\\")[1] -split "&" | Select-Object -First 1
-
-            # Tìm tất cả camera con cùng vendor, ngoại trừ camera nhóm hiện tại
-            $subCams = $allCameras | Where-Object {
-                ($_.DeviceID -match $vendorId) -and ($_.DeviceID -ne $deviceId)
+                if ($cam.Caption -match "IR|Hello|Infrared|RealSense|depth") {
+                    Write-Host "  (Camera nhan dien khuon mat)" -ForegroundColor Green
+                    $hasIR = $true
+                } else {
+                    Write-Host "  (Camera thuong)" -ForegroundColor Yellow
+                }
             }
 
-            # Đánh dấu deviceIDs của nhóm và các camera con đã xử lý
-            $processedDeviceIDs += $deviceId
-            $processedDeviceIDs += $subCams.DeviceID
-
-            # Kiểm tra trong các camera con có IR hoặc Hello không
-            if ($subCams | Where-Object { $_.Caption -match "IR|Hello|Infrared|RealSense" }) {
-                Write-Host "-> Nhom nay co camera IR (Windows Hello)" -ForegroundColor Green
+            if ($hasIR) {
+                Write-Host " => Ket luan: Nhom camera nay co ho tro nhan dien khuon mat Windows Hello" -ForegroundColor Green
             } else {
-                Write-Host "-> Nhom nay chi co camera thuong" -ForegroundColor Yellow
+                Write-Host " => Ket luan: Nhom camera nay chi co camera thuong" -ForegroundColor Yellow
             }
-
-            # In danh sách camera con
-            Write-Host "Danh sach camera con:"
-            foreach ($sub in $subCams) {
-                Write-Host "  + $($sub.Caption)"
-            }
-        }
-        else {
-            # Camera đơn lẻ
-            Write-Host "`n[Camera don le] $caption"
-
-            if ($caption -match "IR|Hello|Infrared|RealSense") {
-                Write-Host "-> La camera nhan dien khuon mat" -ForegroundColor Green
-            } else {
-                Write-Host "-> La camera thuong" -ForegroundColor Yellow
-            }
-            # Đánh dấu đã xử lý
-            $processedDeviceIDs += $deviceId
         }
     }
+
+    # Xu ly camera don le
+    if ($singleCameras.Count -eq 0) {
+        Write-Host "`nKhong tim thay camera don le nao." -ForegroundColor Yellow
+    } else {
+        Write-Host "`n=== Camera don le ==="
+        foreach ($cam in $singleCameras) {
+            Write-Host "Camera: $($cam.Caption)" -NoNewline
+            if ($cam.Caption -match "IR|Hello|Infrared|RealSense|depth") {
+                Write-Host "  (Camera nhan dien khuon mat)" -ForegroundColor Green
+            } else {
+                Write-Host "  (Camera thuong)" -ForegroundColor Yellow
+            }
+        }
+    }
+
 } else {
-    Write-Host "Khong tim thay camera nao" -ForegroundColor Red
+    Write-Host "Khong tim thay thiet bi camera nao" -ForegroundColor Red
 }
 
 Write-Host "`n===== KIEM TRA CAMERA HOAN TAT =====" -ForegroundColor Cyan
